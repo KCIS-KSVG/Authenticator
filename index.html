@@ -19,6 +19,9 @@
         --text-dark: #111827;
         --text-muted: #6b7280;
         --secure-green: #10b981;
+        --warning-amber: #b45309;
+        --warning-bg: #fffdf5;
+        --warning-border: #fcd34d;
         --error-bg: #fef2f2;
         --error-border: #fee2e2;
         --error-text: #991b1b;
@@ -47,6 +50,7 @@
     .usa-accordion__heading {
         max-width: 1200px; margin: 0 auto; padding: 10px 20px;
         display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+        position: relative; background-color: var(--banner-bg); z-index: 2002;
     }
     .flag-icon { width: 16px; opacity: 0.7; border-radius: 2px; }
     .usa-banner__button {
@@ -243,7 +247,7 @@
     .btn-login.secondary { background-color: white; border: 1px solid #d1d5db; color: var(--text-dark); margin-top: 10px; }
     .btn-login.secondary:hover { background-color: #f9fafb; border-color: #9ca3af; }
 
-    /* --- INLINE ERROR MESSAGE (UPDATED) --- */
+    /* --- INLINE ERROR MESSAGE --- */
     .inline-error {
         display: none; width: 100%; margin-bottom: 15px;
         padding: 12px; border-radius: 6px;
@@ -569,6 +573,7 @@ resources.</div>
         const translations = {
             'en-us': {
                 subtitle: "Kang Chiao Students Photography<br>Cooperative Organization",
+                uia_hint: "One ID for all KSVG creative resources.",
                 tab_title: "KSVG | Unified Authentication (UIA)",
                 mode_login: "LOGIN", mode_register: "REGISTER",
                 label_restricted: "REGIONAL POLICY NOTICE",
@@ -584,6 +589,7 @@ resources.</div>
             },
             'zh-hans': {
                 subtitle: "昆山康桥学生摄影合作组织",
+                uia_hint: "使用您的 KSVG ID 访问所有创意资源。",
                 tab_title: "KSVG | 统一身份认证 (UIA)",
                 mode_login: "用户登录", mode_register: "用户注册",
                 label_restricted: "地区政策提示",
@@ -599,6 +605,7 @@ resources.</div>
             },
             'zh-hant': {
                 subtitle: "昆山康橋學生攝影合作組織",
+                uia_hint: "使用您的 KSVG ID 訪問所有創意資源。",
                 tab_title: "KSVG | 统一身份认证 (UIA)",
                 mode_login: "用戶登入", mode_register: "用戶註冊",
                 label_restricted: "地區政策提示",
@@ -646,7 +653,7 @@ resources.</div>
         const SUPABASE_URL = 'https://nggctknpitbycegyvfzk.supabase.co', SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ2N0a25waXRieWNlZ3l2ZnprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NDM5MzksImV4cCI6MjA4NDUxOTkzOX0.zQRfrbC5qSjrnSN9Z_ITjL_OVUbCsWFz5zUro0dP1fU';
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY), wait = (ms) => new Promise(res => setTimeout(res, ms));
 
-        // Use Inline Error instead of Modal - With Close Button
+        // Updated Inline Error
         const showError = (msg, type = 'login') => {
             const el = document.getElementById(type === 'login' ? 'loginError' : 'regError');
             el.innerHTML = `<span class="inline-error-content">${msg}</span><button class="btn-close-error" onclick="this.parentElement.style.display='none'">&times;</button>`;
@@ -684,7 +691,14 @@ resources.</div>
             if (pass.length < 6 || pass !== passConf) return;
             showLoader(); const start = Date.now();
             try {
-                const { data, error } = await supabase.auth.signUp({ email: id, password: pass, options: { data: { full_name: id } } });
+                const { data, error } = await supabase.auth.signUp({ 
+                    email: id, 
+                    password: pass, 
+                    options: { 
+                        data: { full_name: id },
+                        emailRedirectTo: 'https://auth.ksvg.com.cn/verified.html'
+                    } 
+                });
                 const elapsed = Date.now() - start;
                 if (elapsed < 3500) await wait(3500 - elapsed);
                 if (error) throw error;
