@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KSVG | Unified Authentication (UIA)</title>
+    
+    <link rel="icon" href="https://raw.githubusercontent.com/KCIS-KSVG/Data/main/embed/ksvg-logo.png" type="image/png">
+
+<style>
+    /* --- CORE VARIABLES --- */
+    :root {
+        --brand-primary: #002b49;  
+        --brand-secondary: #c41230;
+        --link-blue: #005ea2;
+        --bg-color: #f3f4f6;
+        --surface-color: #ffffff;
+        --border-color: #e5e7eb;
+        --text-dark: #111827;
+        --text-muted: #6b7280;
+        --secure-green: #10b981;
+        --error-bg: #fef2f2;
+        --error-border: #fee2e2;
+        --error-text: #991b1b;
+        --soft-alert-bg: #f9fafb;
+        --soft-alert-text: #6b7280;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+        background-size: 20px 20px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+    }
+
+    /* --- TOP NAVIGATOR --- */
+    .usa-banner {
+        background-color: #f0f0f0; color: #1b1b1b; font-size: 0.8rem;
+        position: relative; z-index: 2000; border-bottom: 1px solid #e2e2e2;
+    }
+    .usa-accordion__heading {
+        max-width: 1200px; margin: 0 auto; padding: 10px 20px;
+        display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    }
+    .flag-icon { width: 16px; opacity: 0.7; border-radius: 2px; }
+    .usa-banner__button {
+        background: none; border: none; color: var(--link-blue); font-weight: 700;
+        cursor: pointer; padding: 0 5px; text-decoration: underline;
+        display: inline-flex; align-items: center; font-size: 0.8rem;
+    }
+    .usa-banner__button:hover { text-decoration: none; }
+    .icon-arrow { width: 10px; height: 10px; margin-left: 4px; transition: transform 0.2s ease; fill: currentColor; }
+    .usa-banner__button[aria-expanded="true"] .icon-arrow { transform: rotate(180deg); }
+    .usa-banner__content {
+        display: none; position: absolute; top: 100%; left: 0; width: 100%;
+        background-color: #f0f0f0; border-bottom: 1px solid #dcdcdc;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px 0; z-index: 2001;
+    }
+    .usa-banner__grid {
+        max-width: 1200px; margin: 0 auto; padding: 0 20px;
+        display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+    }
+    .media-block { display: flex; gap: 15px; }
+    .media-icon {
+        background: #dcdcdc; width: 36px; height: 36px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .media-body h3 { font-size: 0.85rem; margin-bottom: 3px; font-weight: 700; }
+    .media-body p { font-size: 0.8rem; color: #555; line-height: 1.4; }
+
+    .brand-strip {
+        height: 4px; width: 100%;
+        background: linear-gradient(90deg, var(--brand-primary) 60%, var(--brand-secondary) 100%);
+    }
+
+    /* --- MAIN LAYOUT (Split Screen for Desktop) --- */
+    .main-wrapper {
+        flex: 1; display: flex; 
+        width: 100%; max-width: 1400px; margin: 0 auto;
+        padding: 20px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .split-layout {
+        display: flex; width: 100%; height: 100%; align-items: center; justify-content: center;
+    }
+
+    /* --- CREATIVE TEXT (Desktop Left Side) --- */
+    .creative-side {
+        display: none; /* Hidden on mobile */
+        flex: 1;
+        height: 100%;
+        position: relative;
+        justify-content: flex-start; /* Align left */
+        align-items: center;
+        padding-right: 50px;
+        user-select: none;
+    }
+    .creative-poster-text {
+        font-family: 'Georgia', serif;
+        font-weight: 700;
+        font-size: 5rem;
+        line-height: 1.1;
+        color: var(--brand-primary);
+        opacity: 0.08;
+        white-space: pre-wrap;
+        text-align: left;
+    }
+    /* Highlight the "KSVG" part slightly more */
+    .creative-poster-text span.brand {
+        color: var(--brand-secondary);
+        opacity: 0.6; 
+    }
+
+    /* Right Side: Form */
+    .form-side {
+        width: 100%; max-width: 450px;
+        position: relative; z-index: 10;
+    }
+
+    @media (min-width: 900px) {
+        .main-wrapper { justify-content: space-between; }
+        .creative-side { display: flex; }
+        .form-side { margin-left: auto; margin-right: 50px; }
+    }
+
+    /* --- AUTH CARD --- */
+    .auth-card {
+        width: 100%;
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Aperture Icon (Subtle) */
+    .auth-card::after {
+        content: ""; position: absolute; bottom: -30px; right: -30px;
+        width: 140px; height: 140px; opacity: 0.04; pointer-events: none;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23002b49" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>') no-repeat center center;
+        background-size: contain;
+    }
+
+    .auth-view { display: none; }
+    .auth-view.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .card-header { padding: 35px 30px 10px; text-align: center; position: relative; }
+    .logo-area img { height: 75px; width: auto; margin-bottom: 10px; transition: transform 0.3s; }
+    .logo-area img:hover { transform: rotate(-5deg); }
+    
+    .system-title {
+        font-family: 'Georgia', serif; font-size: 2.2rem; margin-bottom: 5px;
+        line-height: 1.2; letter-spacing: 1px; font-weight: 800;
+        color: var(--brand-primary);
+    }
+    .title-service { color: var(--brand-secondary); font-weight: 400; }
+    
+    .system-subtitle {
+        font-size: 0.65rem; color: var(--text-muted);
+        text-transform: uppercase; font-weight: 600;
+        margin: 5px auto 2px; padding: 0 15px;
+        line-height: 1.3; max-width: 320px; text-align: center;
+    }
+    .uia-hint { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 10px; opacity: 0.8; }
+    
+    html[lang^="zh"] .system-subtitle { 
+        font-size: 0.85rem; font-weight: 500; letter-spacing: 1px; 
+        font-family: -apple-system, "Microsoft YaHei", sans-serif; max-width: none;
+    }
+
+    .page-mode-label {
+        display: inline-block;
+        font-size: 0.75rem; font-weight: 700; 
+        color: white; background-color: var(--brand-primary);
+        padding: 4px 12px; border-radius: 20px;
+        letter-spacing: 1px; margin-top: 5px;
+    }
+
+    /* --- LANGUAGE SWITCHER --- */
+    .lang-selector-header {
+        position: absolute; top: 15px; right: 15px; z-index: 50;
+    }
+    .lang-btn {
+        background: transparent; border: 1px solid #e5e7eb;
+        border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;
+        color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 4px;
+        transition: all 0.2s;
+    }
+    .lang-btn:hover { background: #f9fafb; border-color: #d1d5db; color: var(--brand-primary); }
+    .lang-menu {
+        display: none; position: absolute; right: 0; top: 110%;
+        background: white; border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-radius: 8px; z-index: 101; width: 120px; overflow: hidden;
+    }
+    .lang-menu.show { display: block; }
+    .lang-option {
+        display: block; width: 100%; padding: 8px 12px; text-align: left;
+        border: none; background: none; font-size: 0.8rem; color: #374151; cursor: pointer;
+    }
+    .lang-option:hover { background-color: #f3f4f6; color: var(--brand-primary); }
+
+    .card-body { padding: 15px 30px 30px; position: relative; z-index: 2; }
+
+    /* --- FORM STYLES --- */
+    .input-group { margin-bottom: 20px; }
+    .input-label { display: block; font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 8px; }
+    .input-wrapper { position: relative; }
+    .input-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+    
+    .status-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); display: none; }
+    .input-group.status-success .status-icon.icon-check { display: block; color: var(--secure-green); }
+    .input-group.status-error .status-icon.icon-x { display: block; color: var(--brand-secondary); }
+
+    .form-control {
+        width: 100%; padding: 14px 14px 14px 45px; border: 1px solid #d1d5db;
+        border-radius: 8px; font-size: 1rem; transition: all 0.2s; background-color: #fff;
+    }
+    .form-control:focus { 
+        outline: none; border-color: var(--brand-primary); 
+        box-shadow: 0 0 0 2px rgba(0, 43, 73, 0.2); 
+    }
+
+    .btn-login {
+        width: 100%; padding: 16px; background-color: var(--brand-primary);
+        color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600;
+        cursor: pointer; transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-login:hover { background-color: #001f35; }
+    .btn-login:active { transform: scale(0.98); }
+    
+    .btn-login.secondary { background-color: white; border: 1px solid #d1d5db; color: var(--text-dark); margin-top: 10px; }
+    .btn-login.secondary:hover { background-color: #f9fafb; border-color: #9ca3af; }
+
+    /* --- INLINE ERROR MESSAGE (UPDATED) --- */
+    .inline-error {
+        display: none; width: 100%; margin-bottom: 15px;
+        padding: 12px; border-radius: 6px;
+        background-color: var(--error-bg); 
+        border: 1px solid var(--error-border);
+        color: var(--error-text); 
+        font-size: 0.85rem; font-weight: 400; /* Not bold */
+        text-align: left;
+        position: relative;
+        animation: fadeIn 0.2s ease;
+    }
+    .inline-error-content { padding-right: 20px; display: block; }
+    .btn-close-error {
+        position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+        background: none; border: none; cursor: pointer; color: var(--error-text);
+        font-size: 1.2rem; line-height: 1; padding: 0 5px; opacity: 0.6;
+    }
+    .btn-close-error:hover { opacity: 1; }
+
+    /* --- SOFT WARNING BOX --- */
+    .soft-warning {
+        margin-top: 20px;
+        background-color: var(--soft-alert-bg);
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        display: flex; gap: 10px; align-items: start;
+    }
+    .soft-warning svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .soft-warning-text { font-size: 0.75rem; color: var(--soft-alert-text); line-height: 1.4; }
+
+    .card-footer { padding: 25px; text-align: center; font-size: 0.8rem; color: #6b7280; border-top: 1px solid #f3f4f6; }
+    .footer-link { color: var(--brand-primary); text-decoration: none; cursor: pointer; }
+    .footer-link:hover { text-decoration: underline; }
+
+    .switch-auth { margin-top: 20px; text-align: center; font-size: 0.9rem; }
+    .switch-auth a { color: var(--brand-primary); font-weight: 600; text-decoration: none; cursor: pointer; }
+
+    /* --- LOADER --- */
+    #loadingOverlay {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(255,255,255,0.98);
+        display: none; flex-direction: column; justify-content: center; align-items: center;
+        z-index: 50; padding: 20px; text-align: center;
+        border-radius: 12px;
+    }
+    .spinner-brush {
+        width: 40px; height: 40px; margin-bottom: 20px;
+        border: 3px solid rgba(0, 43, 73, 0.1); border-top-color: var(--brand-primary); border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+        .usa-banner__grid { grid-template-columns: 1fr; gap: 20px; }
+        .system-title { font-size: 1.8rem; }
+    }
+</style>
+</head>
+<body>
+
+    <header class="usa-banner">
+        <div class="usa-accordion__heading">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/ef/International_Flag_of_Planet_Earth.svg" alt="Flag" class="flag-icon">
+            <div style="font-weight:400; margin-right: 5px;">An official website of the KSVG Organization</div>
+            <button class="usa-banner__button" aria-expanded="false" onclick="toggleBanner()">
+                Here’s how you know <svg class="icon-arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+        </div>
+        <div class="usa-banner__content" id="govBannerContent">
+            <div class="usa-banner__grid">
+                <div class="media-block">
+                    <div class="media-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    </div>
+                    <div class="media-body">
+                        <h3>Official websites use .ksvg.com.cn</h3>
+                        <p>A <strong>.ksvg.com.cn</strong> website belongs to an official KSVG entity or an organization hosted under KSVG infrastructure.</p>
+                    </div>
+                </div>
+                <div class="media-block">
+                    <div class="media-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
+                    <div class="media-body">
+                        <h3>Secure Connection</h3>
+                        <p>A lock or <strong>https://</strong> means you’ve safely connected to the server.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="brand-strip"></div>
+
+    <div class="main-wrapper">
+        <div class="split-layout">
+            
+            <!-- LEFT: Creative Content (Desktop) -->
+            <div class="creative-side">
+                <div class="creative-poster-text">One ID
+for all
+KSVG
+creative
+resources.</div>
+            </div>
+
+            <!-- RIGHT: Form -->
+            <div class="form-side">
+                <div class="auth-card">
+                    
+                    <!-- HEADER / LANGUAGE SELECTOR -->
+                    <div class="lang-selector-header">
+                        <button class="lang-btn" onclick="toggleLangMenu(this)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                            <span class="current-lang-text">EN</span> ▾
+                        </button>
+                        <div class="lang-menu">
+                            <button class="lang-option" onclick="setLanguage('en-us')">English</button>
+                            <button class="lang-option" onclick="setLanguage('zh-hans')">简体中文</button>
+                            <button class="lang-option" onclick="setLanguage('zh-hant')">繁體中文</button>
+                        </div>
+                    </div>
+
+                    <!-- LOADING OVERLAY (NO PRO TIP) -->
+                    <div id="loadingOverlay">
+                        <div class="spinner-brush"></div>
+                        <div style="font-size:0.8rem; font-weight:700; color:#002b49; letter-spacing:1px;" data-i18n="text_processing">PROCESSING</div>
+                    </div>
+
+                    <!-- VIEW 1: LOGIN -->
+                    <div id="view-login" class="auth-view active">
+                        <div class="card-header">
+                            <div class="logo-area">
+                                <img src="https://raw.githubusercontent.com/KCIS-KSVG/Data/main/embed/ksvg-logo.png" alt="KSVG Logo">
+                            </div>
+                            <h1 class="system-title"><span class="title-brand">KSVG</span> <span class="title-service">UIA</span></h1>
+                            <div class="system-subtitle" data-i18n="subtitle">Kang Chiao Students Photography Cooperative Organization</div>
+                            <div class="page-mode-label" data-i18n="mode_login">LOGIN</div>
+                        </div>
+
+                        <div class="card-body">
+                            <div id="loginError" class="inline-error"></div>
+
+                            <form id="loginForm">
+                                <div class="input-group">
+                                    <label class="input-label" for="loginId" data-i18n="label_email_id">Email Address / KSVG ID</label>
+                                    <div class="input-wrapper">
+                                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                        <input type="text" id="loginId" class="form-control" placeholder="*****" autocomplete="off" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label" for="loginPass" data-i18n="label_password">Password</label>
+                                    <div class="input-wrapper">
+                                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                        <input type="password" id="loginPass" class="form-control" placeholder="••••••••" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn-login" id="btnLogin" data-i18n="btn_login">Login</button>
+                                
+                                <div class="switch-auth">
+                                    <span data-i18n="text_new_user">New to KSVG?</span> 
+                                    <a href="javascript:void(0)" onclick="window.switchView('register')" data-i18n="link_register_here">Register Here!</a>
+                                </div>
+
+                                <!-- Soft Warning -->
+                                <div class="soft-warning">
+                                    <!-- Corrected Exclamation Circle Icon -->
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                    <div class="soft-warning-text" data-i18n="warn_restricted_text">
+                                        Due to regional policy, the KSVG UIA service built on Supabase is restricted to users outside Mainland China.
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- VIEW 2: REGISTER -->
+                    <div id="view-register" class="auth-view">
+                        <div class="card-header">
+                            <div class="logo-area">
+                                <img src="https://raw.githubusercontent.com/KCIS-KSVG/Data/main/embed/ksvg-logo.png" alt="KSVG Logo">
+                            </div>
+                            <h1 class="system-title"><span class="title-brand">KSVG</span> <span class="title-service">UIA</span></h1>
+                            <div class="system-subtitle" data-i18n="subtitle">Kang Chiao Students Photography Cooperative Organization</div>
+                            <div class="page-mode-label" data-i18n="mode_register">REGISTER</div>
+                        </div>
+
+                        <div class="card-body">
+                            <div id="regError" class="inline-error"></div>
+
+                            <div id="regConfirmState" style="display:none; text-align:center; padding:10px 0;">
+                                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="margin-bottom:15px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                <h3 style="margin-bottom:10px; color:#111827" data-i18n="msg_check_email_title">Check your Email</h3>
+                                <p style="color:#6b7280; font-size:0.9rem; line-height:1.5; margin-bottom:20px;">
+                                    <span data-i18n="msg_check_email_1">We've sent a confirmation link to</span> <strong id="sentEmailAdd"></strong>.<br>
+                                    <span data-i18n="msg_check_email_2">Please click the link to activate your account.</span>
+                                </p>
+                                
+                                <div class="email-client-btns">
+                                    <a id="smartMailBtn" href="javascript:void(0)" class="btn-login" style="text-decoration:none; display:none;">
+                                        <span data-i18n="btn_goto_webmail">Go to Webmail</span>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                    </a>
+                                    <button class="btn-login secondary" style="margin-top:0" onclick="window.switchView('login')">
+                                        <span data-i18n="btn_close">Close</span>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <form id="registerForm">
+                                <div class="input-group" id="groupRegEmail">
+                                    <label class="input-label" for="regId" data-i18n="label_email">Email Address</label>
+                                    <div class="input-wrapper">
+                                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                        <input type="text" id="regId" class="form-control" placeholder="example@ksvg.com.cn" autocomplete="off" required>
+                                        <svg class="status-icon icon-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        <svg class="status-icon icon-x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </div>
+                                </div>
+                                <div class="input-group" id="groupPass1">
+                                    <label class="input-label" for="regPass" data-i18n="label_create_pass">Create Password</label>
+                                    <div class="input-wrapper">
+                                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                        <input type="password" id="regPass" class="form-control" placeholder="••••••••" required>
+                                        <svg class="status-icon icon-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        <svg class="status-icon icon-x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </div>
+                                </div>
+                                <div class="input-group" id="groupPass2">
+                                    <label class="input-label" for="regPassConfirm" data-i18n="label_confirm_pass">Confirm Password</label>
+                                    <div class="input-wrapper">
+                                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                        <input type="password" id="regPassConfirm" class="form-control" placeholder="••••••••" required>
+                                        <svg class="status-icon icon-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        <svg class="status-icon icon-x" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn-login" id="btnRegister" data-i18n="btn_create_account">Create Account</button>
+                                <div class="switch-auth">
+                                    <span data-i18n="text_has_account">Already have an account?</span> 
+                                    <a href="javascript:void(0)" onclick="window.switchView('login')" data-i18n="link_login_here">Login Here</a>
+                                </div>
+
+                                <!-- Soft Warning -->
+                                <div class="soft-warning">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                    <div class="soft-warning-text" data-i18n="warn_restricted_text">
+                                        Due to regional policy, the KSVG UIA service built on Supabase is restricted to users outside Mainland China.
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        &copy; 2025 KSVG. All rights reserved.<br>
+                        <a href="javascript:void(0)" onclick="openSupportEmail()" class="footer-link" data-i18n="footer_support">Need Support?</a> | <a href="https://redirect.ksvg.com.cn/?https://docs.ksvg.com.cn" class="footer-link" target="_blank" data-i18n="footer_privacy">Privacy Policy</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function validateRegister() {
+            const email = document.getElementById('regId').value;
+            const p1 = document.getElementById('regPass').value;
+            const p2 = document.getElementById('regPassConfirm').value;
+            const eG = document.getElementById('groupRegEmail'), p1G = document.getElementById('groupPass1'), p2G = document.getElementById('groupPass2');
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            eG.classList.remove('status-success', 'status-error');
+            if (email.length > 0) eG.classList.add(emailRegex.test(email) ? 'status-success' : 'status-error');
+            p1G.classList.remove('status-success', 'status-error');
+            if (p1.length > 0) p1G.classList.add(p1.length >= 6 ? 'status-success' : 'status-error');
+            p2G.classList.remove('status-success', 'status-error');
+            if (p2.length > 0) p2G.classList.add((p2 === p1 && p1.length >= 6) ? 'status-success' : 'status-error');
+        }
+
+        document.getElementById('regId').addEventListener('blur', validateRegister);
+        document.getElementById('regPass').addEventListener('blur', validateRegister);
+        document.getElementById('regPassConfirm').addEventListener('blur', validateRegister);
+
+        window.resetRegView = function() {
+            const f = document.getElementById('registerForm'), c = document.getElementById('regConfirmState');
+            f.style.display = 'block'; c.style.display = 'none'; f.reset();
+            document.querySelectorAll('.input-group').forEach(g => g.classList.remove('status-success', 'status-error'));
+            document.getElementById('regError').style.display = 'none';
+        }
+
+        window.switchView = function(viewName) {
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('regError').style.display = 'none';
+            const loginView = document.getElementById('view-login');
+            const registerView = document.getElementById('view-register');
+            const url = new URL(window.location);
+            url.searchParams.set('view', viewName);
+            window.history.replaceState({}, '', url);
+
+            if (viewName === 'register') {
+                window.resetRegView();
+                loginView.classList.remove('active');
+                registerView.classList.add('active');
+            } else {
+                registerView.classList.remove('active');
+                loginView.classList.add('active');
+                window.resetRegView();
+            }
+        }
+
+        window.openSupportEmail = function() { window.location.href = "mailto:support@ksvg.com.cn"; }
+        window.toggleBanner = function() {
+            const content = document.getElementById('govBannerContent');
+            const btn = document.querySelector('.usa-banner__button');
+            const isExp = btn.getAttribute('aria-expanded') === 'true';
+            content.style.display = isExp ? 'none' : 'block';
+            btn.setAttribute('aria-expanded', isExp ? 'false' : 'true');
+        }
+        window.toggleLangMenu = function(btn) { btn.nextElementSibling.classList.toggle('show'); }
+
+        const translations = {
+            'en-us': {
+                subtitle: "Kang Chiao Students Photography<br>Cooperative Organization",
+                tab_title: "KSVG | Unified Authentication (UIA)",
+                mode_login: "LOGIN", mode_register: "REGISTER",
+                label_restricted: "REGIONAL POLICY NOTICE",
+                warn_restricted_text: "Due to regional policy, the KSVG Unified Identity Authentication (UIA) service built on Supabase is restricted to users outside Mainland China.",
+                label_email_id: "Email Address / KSVG ID", label_password: "Password", btn_login: "Login",
+                text_new_user: "New to KSVG?", link_register_here: "Register Here!",
+                label_email: "Email Address", label_create_pass: "Create Password", label_confirm_pass: "Confirm Password",
+                btn_create_account: "Create Account", text_has_account: "Already have an account?", link_login_here: "Login Here",
+                footer_support: "Need Support?", footer_privacy: "Privacy Policy",
+                msg_check_email_title: "Check your Email", msg_check_email_1: "We've sent a confirmation link to", msg_check_email_2: "Please click the link to activate your account.",
+                btn_goto_webmail: "Go to Webmail", btn_close: "Close",
+                text_processing: "PROCESSING", err_title: "Authentication Error"
+            },
+            'zh-hans': {
+                subtitle: "昆山康桥学生摄影合作组织",
+                tab_title: "KSVG | 统一身份认证 (UIA)",
+                mode_login: "用户登录", mode_register: "用户注册",
+                label_restricted: "地区政策提示",
+                warn_restricted_text: "因地区政策原因，基于 Supabase 构建的 KSVG 统一身份认证（UIA）服务仅限在中国大陆境外的用户使用。",
+                label_email_id: "电子邮箱 / KSVG ID", label_password: "密码", btn_login: "登 录",
+                text_new_user: "新用户？", link_register_here: "在此注册！",
+                label_email: "电子邮箱", label_create_pass: "创建密码", label_confirm_pass: "确认密码",
+                btn_create_account: "创建账户", text_has_account: "已有账户？", link_login_here: "在此登录",
+                footer_support: "需要帮助？", footer_privacy: "隐私政策",
+                msg_check_email_title: "请查看您的邮箱", msg_check_email_1: "我们已向以下地址发送了确认链接：", msg_check_email_2: "请点击链接以激活您的账户。",
+                btn_goto_webmail: "前往邮箱网页版", btn_close: "关闭",
+                text_processing: "处理中", err_title: "身份验证错误"
+            },
+            'zh-hant': {
+                subtitle: "昆山康橋學生攝影合作組織",
+                tab_title: "KSVG | 统一身份认证 (UIA)",
+                mode_login: "用戶登入", mode_register: "用戶註冊",
+                label_restricted: "地區政策提示",
+                warn_restricted_text: "因地區政策原因，基於 Supabase 構建的 KSVG 統一身份認證（UIA）服務僅限在中國大陸境外的用戶使用。",
+                label_email_id: "電子郵箱 / KSVG ID", label_password: "密碼", btn_login: "登 入",
+                text_new_user: "新用戶？", link_register_here: "在此註冊！",
+                label_email: "電子郵箱", label_create_pass: "建立密碼", label_confirm_pass: "確認密碼",
+                btn_create_account: "建立帳戶", text_has_account: "已有帳戶？", link_login_here: "在此登入",
+                footer_support: "需要協助？", footer_privacy: "隱私政策",
+                msg_check_email_title: "請查看您的郵箱", msg_check_email_1: "我們已向以下地址發送了確認鏈接：", msg_check_email_2: "請點擊鏈接以激活您的帳戶。",
+                btn_goto_webmail: "前往郵箱網頁版", btn_close: "關閉",
+                text_processing: "處理中", err_title: "身份驗證錯誤"
+            }
+        };
+
+        window.setLanguage = function(lang) {
+            if (!translations[lang]) lang = 'en-us';
+            document.documentElement.setAttribute('lang', lang);
+            const url = new URL(window.location);
+            url.searchParams.set('lang', lang);
+            window.history.replaceState({}, '', url);
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) el.innerHTML = translations[lang][key];
+            });
+            document.title = translations[lang].tab_title;
+            const lbls = {'en-us': 'EN', 'zh-hans': '简', 'zh-hant': '繁'};
+            document.querySelectorAll('.current-lang-text').forEach(s => s.textContent = lbls[lang]);
+            localStorage.setItem('ksvg_ui_lang', lang);
+            document.querySelectorAll('.lang-menu').forEach(m => m.classList.remove('show'));
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            let lang = params.get('lang') || localStorage.getItem('ksvg_ui_lang') || 'en-us';
+            window.setLanguage(lang);
+            let view = params.get('view') || 'login';
+            window.switchView(view);
+        });
+    </script>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        const SUPABASE_URL = 'https://nggctknpitbycegyvfzk.supabase.co', SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ2N0a25waXRieWNlZ3l2ZnprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NDM5MzksImV4cCI6MjA4NDUxOTkzOX0.zQRfrbC5qSjrnSN9Z_ITjL_OVUbCsWFz5zUro0dP1fU';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY), wait = (ms) => new Promise(res => setTimeout(res, ms));
+
+        // Use Inline Error instead of Modal - With Close Button
+        const showError = (msg, type = 'login') => {
+            const el = document.getElementById(type === 'login' ? 'loginError' : 'regError');
+            el.innerHTML = `<span class="inline-error-content">${msg}</span><button class="btn-close-error" onclick="this.parentElement.style.display='none'">&times;</button>`;
+            el.style.display = 'block';
+        }
+
+        const showLoader = () => {
+            const loader = document.getElementById('loadingOverlay');
+            loader.style.display = 'flex';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            document.getElementById('loginError').style.display = 'none';
+            const id = document.getElementById('loginId').value.trim(), pass = document.getElementById('loginPass').value;
+            let email = id.includes('@') ? id : id + '@ksvg.com.cn';
+            showLoader(); const start = Date.now();
+            try {
+                const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+                const elapsed = Date.now() - start;
+                if (elapsed < 3500) await wait(3500 - elapsed);
+                if (error) throw error;
+                window.location.href = sessionStorage.getItem('ksvg_auth_redirect') || "https://ksvg.com.cn";
+            } catch (err) {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                showError(err.message.includes("Invalid login") ? "Incorrect username or password." : err.message, 'login');
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            document.getElementById('regError').style.display = 'none';
+            const id = document.getElementById('regId').value.trim(), pass = document.getElementById('regPass').value, passConf = document.getElementById('regPassConfirm').value;
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id)) return;
+            if (pass.length < 6 || pass !== passConf) return;
+            showLoader(); const start = Date.now();
+            try {
+                const { data, error } = await supabase.auth.signUp({ email: id, password: pass, options: { data: { full_name: id } } });
+                const elapsed = Date.now() - start;
+                if (elapsed < 3500) await wait(3500 - elapsed);
+                if (error) throw error;
+                document.getElementById('loadingOverlay').style.display = 'none';
+                if (data.user && data.user.identities?.length === 0) showError("Account exists. Please check your email or login.", 'register');
+                else {
+                    document.getElementById('registerForm').style.display = 'none';
+                    document.getElementById('regConfirmState').style.display = 'block';
+                    document.getElementById('sentEmailAdd').textContent = id;
+                    const dom = id.split('@')[1], smartBtn = document.getElementById('smartMailBtn'), maps = {'gmail.com':'https://mail.google.com','qq.com':'https://mail.qq.com','outlook.com':'https://outlook.live.com','icloud.com':'https://www.icloud.com/mail','163.com':'https://mail.163.com'};
+                    if(maps[dom]){ smartBtn.style.display = 'flex'; smartBtn.onclick = () => { window.open(maps[dom], '_blank'); window.switchView('login'); };}
+                }
+            } catch (err) { document.getElementById('loadingOverlay').style.display = 'none'; showError(err.message, 'register'); }
+        });
+    </script>
+</body>
+</html>
